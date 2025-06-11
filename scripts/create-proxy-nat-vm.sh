@@ -40,9 +40,9 @@ if [ ! -f "$CLOUDINIT_SNIPPET" ]; then
   cat <<EOF > "$CLOUDINIT_SNIPPET"
 #cloud-config
 hostname: proxy-nat
-manage_etc_hosts: true
 timezone: Europe/Berlin
 ssh_pwauth: true
+manage_etc_hosts: true
 
 users:
   - name: admin
