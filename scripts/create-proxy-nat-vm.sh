@@ -42,15 +42,20 @@ if [ ! -f "$CLOUDINIT_SNIPPET" ]; then
 hostname: proxy-nat
 manage_etc_hosts: true
 timezone: Europe/Berlin
+ssh_pwauth: true
+
 users:
   - name: admin
-    sudo: ALL=(ALL) NOPASSWD:ALL
-    groups: users,admin
+    gecos: Admin User
     shell: /bin/bash
+    sudo: ALL=(ALL) NOPASSWD:ALL
+    lock_passwd: false
+
 chpasswd:
   list: |
-    admin:admin
+    admin:admin123
   expire: false
+
 package_update: true
 package_upgrade: true
 packages:
