@@ -8,8 +8,11 @@ users:
     sudo: ALL=(ALL) NOPASSWD:ALL
     groups: users,admin
     shell: /bin/bash
-    lock_passwd: false
-    passwd: "$6$uTGVvE1l$4qFdTz49Me0Iuj7Rlg/vIrWc.ywHJ9sWxeZAjx/YFykXrgqzDYCT/Bk1wJg7FQ3vkp3UjLtlj2qIrcPv8cGn/"
+
+chpasswd:
+  list: |
+    admin:admin123
+  expire: false
 
 package_update: true
 package_upgrade: true
