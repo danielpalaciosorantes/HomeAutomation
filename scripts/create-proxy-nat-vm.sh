@@ -59,7 +59,7 @@ packages:
   - docker-compose
   - iptables
 runcmd:
-  - curl -o /root/setup.sh https://github.com/danielpalaciosorantes/HomeAutomation/blob/main/scripts/setup-proxy-nat.sh
+  - curl -o /root/setup.sh https://raw.githubusercontent.com/danielpalaciosorantes/HomeAutomation/refs/heads/main/scripts/setup-proxy-nat.sh
   - chmod +x /root/setup.sh
   - /root/setup.sh
 EOF
