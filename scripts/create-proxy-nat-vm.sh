@@ -49,7 +49,7 @@ users:
     shell: /bin/bash
 chpasswd:
   list: |
-    admin:admin123
+    admin:admin
   expire: false
 package_update: true
 package_upgrade: true
@@ -79,7 +79,7 @@ qm set $VMID --ide2 $STORAGE:cloudinit
 qm set $VMID --ipconfig0 ip=dhcp
 qm set $VMID --net1 virtio,bridge=vmbr1
 qm set $VMID --ipconfig1 ip=10.10.10.1/24
-qm set $VMID --ciuser admin --cipassword admin123
+qm set $VMID --ciuser admin --cipassword admin
 qm set $VMID --cicustom "user=local:snippets/user-data.yaml"
 
 # Step 5: Start the VM
