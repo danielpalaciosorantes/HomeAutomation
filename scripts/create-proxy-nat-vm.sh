@@ -70,6 +70,7 @@ echo "🖥️ Creating Proxmox VM..."
 qm create $VMID --name $VMNAME --memory $MEMORY --cores $CORES --net0 virtio,bridge=vmbr0
 qm importdisk $VMID "$IMG_PATH" $STORAGE
 qm set $VMID --scsihw virtio-scsi-pci --scsi0 ${STORAGE}:vm-${VMID}-disk-0
+qm resize $VMID scsi0 $DISK_SIZE
 qm set $VMID --boot c --bootdisk scsi0
 qm set $VMID --serial0 socket --vga serial0
 qm set $VMID --ide2 $STORAGE:cloudinit
