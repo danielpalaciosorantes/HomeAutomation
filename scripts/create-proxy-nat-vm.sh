@@ -37,7 +37,7 @@ fi
 if [ ! -f "$CLOUDINIT_SNIPPET" ]; then
   echo "⚙️ Creating cloud-init user-data..."
   mkdir -p /var/lib/vz/snippets
-  cat <<EOF > "$CLOUDINIT_SNIPPET"
+  cat <<'EOF' > "$CLOUDINIT_SNIPPET"
 #cloud-config
 hostname: proxy-nat
 timezone: Europe/Berlin
