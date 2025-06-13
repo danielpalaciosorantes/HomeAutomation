@@ -64,9 +64,10 @@ packages:
   - docker-compose
   - iptables
 runcmd:
-  - curl -o /root/setup.sh https://raw.githubusercontent.com/danielpalaciosorantes/HomeAutomation/refs/heads/main/scripts/setup-proxy-nat.sh
-  - chmod +x /root/setup.sh
-  - /root/setup.sh
+  - echo "cloud-init completed" > /var/log/cloud-init-success.log
+#  - curl -o /root/setup.sh https://raw.githubusercontent.com/danielpalaciosorantes/HomeAutomation/refs/heads/main/scripts/setup-proxy-nat.sh
+#  - chmod +x /root/setup.sh
+#  - /root/setup.sh
 EOF
 fi
 
