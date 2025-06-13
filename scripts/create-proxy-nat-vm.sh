@@ -41,20 +41,18 @@ if [ ! -f "$CLOUDINIT_SNIPPET" ]; then
 #cloud-config
 hostname: proxy-nat
 timezone: Europe/Berlin
-ssh_pwauth: true
 manage_etc_hosts: true
-
 users:
   - name: admin
     gecos: Admin User
+    lock_passwd: false
     shell: /bin/bash
     sudo: ALL=(ALL) NOPASSWD:ALL
-    lock_passwd: false
+    passwd: "$6$TyiFXrjq$MPMEJGV4gGFV1JGHZ6v3hsN6U7PgxPKvK/sTpCMBfdLJ7MRZmW9AZj5H0G3gGRi0OvWxk3YMdUpb4ChvYOekv0"
 
 chpasswd:
-  list: |
-    admin:admin123
   expire: false
+ssh_pwauth: true
 
 package_update: true
 package_upgrade: true
@@ -84,7 +82,6 @@ qm set $VMID --ide2 $STORAGE:cloudinit
 qm set $VMID --ipconfig0 ip=dhcp
 qm set $VMID --net1 virtio,bridge=vmbr1
 qm set $VMID --ipconfig1 ip=10.10.10.1/24
-qm set $VMID --ciuser admin --cipassword admin
 qm set $VMID --cicustom "user=local:snippets/user-data.yaml"
 
 # Step 5: Start the VM
