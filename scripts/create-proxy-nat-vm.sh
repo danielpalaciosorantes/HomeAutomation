@@ -44,15 +44,14 @@ timezone: Europe/Berlin
 manage_etc_hosts: true
 users:
   - name: admin
-    gecos: Admin User
     lock_passwd: false
     shell: /bin/bash
     sudo: ALL=(ALL) NOPASSWD:ALL
-    passwd: "$6$TyiFXrjq$MPMEJGV4gGFV1JGHZ6v3hsN6U7PgxPKvK/sTpCMBfdLJ7MRZmW9AZj5H0G3gGRi0OvWxk3YMdUpb4ChvYOekv0"
+    passwd: "$6$rounds=4096$saltstring$Cq7gzJz5msxOph7I9Fqqk/olN3lb0OvFZ12wE9tY57wEjxZaK9KZMaU8bP8YRx3U2PTnPoQxQ7NgnWzEqTDg90"
 
+ssh_pwauth: true
 chpasswd:
   expire: false
-ssh_pwauth: true
 
 package_update: true
 package_upgrade: true
