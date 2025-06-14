@@ -5,14 +5,11 @@ manage_etc_hosts: true
 
 users:
   - name: admin
-    sudo: ALL=(ALL) NOPASSWD:ALL
-    groups: users,admin
+    sudo: ["ALL=(ALL) NOPASSWD:ALL"]
+    groups: users, admin
     shell: /bin/bash
-
-chpasswd:
-  list: |
-    admin:admin123
-  expire: false
+    ssh_authorized_keys:
+      - REPLACE_SSH_KEY
 
 package_update: true
 package_upgrade: true
@@ -24,7 +21,7 @@ packages:
   - docker-compose
   - iptables
 
-runcmd:
-  - curl -o /root/setup.sh https://raw.githubusercontent.com/danielpalaciosorantes/HomeAutomation/refs/heads/main/scripts/setup-proxy-nat.sh
-  - chmod +x /root/setup.sh
-  - /root/setup.sh
+#runcmd:
+#  - curl -o /root/setup.sh https://raw.githubusercontent.com/danielpalaciosorantes/HomeAutomation/refs/heads/main/scripts/setup-proxy-nat.sh
+#  - chmod +x /root/setup.sh
+#  - /root/setup.sh

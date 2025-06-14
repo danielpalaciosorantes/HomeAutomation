@@ -44,38 +44,10 @@ if [ ! -f "$CLOUDINIT_SNIPPET" ]; then
     exit 1
   fi
 
-  cat <<'EOF' > "$CLOUDINIT_SNIPPET"
-#cloud-config
-hostname: proxy-nat
-timezone: Europe/Berlin
-manage_etc_hosts: true
-users:
-  - name: admin
-    lock_passwd: false
-    shell: /bin/bash
-    sudo: ['ALL=(ALL) NOPASSWD:ALL']
-    ssh_authorized_keys:
-      - REPLACE_SSH_KEY
+  echo "📥 Downloading cloud-init config from GitHub..."
+  wget -q https://raw.githubusercontent.com/danielpalaciosorantes/HomeAutomation/refs/heads/main/scripts/user-data.yml \
+       -O "$CLOUDINIT_SNIPPET"
 
-ssh_pwauth: true
-chpasswd:
-  expire: false
-
-package_update: true
-package_upgrade: true
-packages:
-  - curl
-  - cloud-guest-utils
-  - e2fsprogs
-  - docker.io
-  - docker-compose
-  - iptables
-runcmd:
-  - echo "cloud-init completed" > /var/log/cloud-init-success.log
-#  - curl -o /root/setup.sh https://raw.githubusercontent.com/danielpalaciosorantes/HomeAutomation/refs/heads/main/scripts/setup-proxy-nat.sh
-#  - chmod +x /root/setup.sh
-#  - /root/setup.sh
-EOF
   # Replace placeholder with actual key safely
   sed -i "s|REPLACE_SSH_KEY|$SSH_KEY|" "$CLOUDINIT_SNIPPET"
 fi
