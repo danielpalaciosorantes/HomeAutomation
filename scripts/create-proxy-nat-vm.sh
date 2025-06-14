@@ -44,7 +44,7 @@ if [ ! -f "$CLOUDINIT_SNIPPET" ]; then
     exit 1
   fi
 
-  cat $SSH_KEY
+  cat "$SSH_KEY"
   echo "📥 Downloading cloud-init config from GitHub..."
   wget -q https://raw.githubusercontent.com/danielpalaciosorantes/HomeAutomation/refs/heads/main/scripts/user-data.yml \
        -O "$CLOUDINIT_SNIPPET"
