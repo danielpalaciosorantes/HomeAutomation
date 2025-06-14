@@ -42,10 +42,9 @@ if [ ! -f "$CLOUDINIT_SNIPPET" ]; then
   if [ -z "$SSH_KEY" ]; then
     echo "❌ No SSH public key found in ~/.ssh. Aborting."
     exit 1
-  else
-    cat $SSH_KEY
   fi
 
+  cat $SSH_KEY
   echo "📥 Downloading cloud-init config from GitHub..."
   wget -q https://raw.githubusercontent.com/danielpalaciosorantes/HomeAutomation/refs/heads/main/scripts/user-data.yml \
        -O "$CLOUDINIT_SNIPPET"
