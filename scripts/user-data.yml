@@ -13,13 +13,13 @@ users:
 
 package_update: true
 package_upgrade: true
-packages:
-  - curl
-  - cloud-guest-utils
-  - e2fsprogs
-  - docker.io
-  - docker-compose
-  - iptables
+#packages:
+#  - curl
+#  - cloud-guest-utils
+#  - e2fsprogs
+#  - docker.io
+#  - docker-compose
+#  - iptables
 
 #runcmd:
 #  - curl -o /root/setup.sh https://raw.githubusercontent.com/danielpalaciosorantes/HomeAutomation/refs/heads/main/scripts/setup-proxy-nat.sh
