@@ -37,6 +37,13 @@ fi
 if [ ! -f "$CLOUDINIT_SNIPPET" ]; then
   echo "⚙️ Creating cloud-init user-data..."
   mkdir -p /var/lib/vz/snippets
+
+  SSH_KEY=$(cat ~/.ssh/id_ed25519.pub 2>/dev/null || cat ~/.ssh/id_rsa.pub 2>/dev/null)
+  if [ -z "$SSH_KEY" ]; then
+    echo "❌ No SSH public key found in ~/.ssh. Aborting."
+    exit 1
+  fi
+
   cat <<'EOF' > "$CLOUDINIT_SNIPPET"
 #cloud-config
 hostname: proxy-nat
@@ -46,8 +53,9 @@ users:
   - name: admin
     lock_passwd: false
     shell: /bin/bash
-    sudo: ALL=(ALL) NOPASSWD:ALL
-    passwd: "$6$rounds=4096$saltstring$Cq7gzJz5msxOph7I9Fqqk/olN3lb0OvFZ12wE9tY57wEjxZaK9KZMaU8bP8YRx3U2PTnPoQxQ7NgnWzEqTDg90"
+    sudo: ['ALL=(ALL) NOPASSWD:ALL']
+    ssh_authorized_keys:
+      - REPLACE_SSH_KEY
 
 ssh_pwauth: true
 chpasswd:
@@ -68,6 +76,8 @@ runcmd:
 #  - chmod +x /root/setup.sh
 #  - /root/setup.sh
 EOF
+  # Replace placeholder with actual key safely
+  sed -i "s|REPLACE_SSH_KEY|$SSH_KEY|" "$CLOUDINIT_SNIPPET"
 fi
 
 # Step 4: Create and configure VM
