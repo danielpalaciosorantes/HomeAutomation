@@ -8,6 +8,7 @@ DISK_SIZE="20G"
 MEMORY=2048
 CORES=2
 STORAGE="local-lvm"
+STORAGE_CLOUDINIT="local"
 ISO_DIR="/var/lib/vz/template/iso"
 IMG_NAME="debian-12-genericcloud-amd64.qcow2"
 IMG_URL="https://cloud.debian.org/images/cloud/bookworm/latest/$IMG_NAME"
@@ -64,7 +65,7 @@ qm set $VMID --scsihw virtio-scsi-pci --scsi0 ${STORAGE}:vm-${VMID}-disk-0
 qm resize $VMID scsi0 $DISK_SIZE
 qm set $VMID --boot c --bootdisk scsi0
 qm set $VMID --serial0 socket --vga serial0
-qm set $VMID --ide2 $STORAGE:cloudinit
+qm set $VMID --ide2 $STORAGE_CLOUDINIT:cloudinit
 qm set $VMID --ipconfig0 ip=dhcp
 qm set $VMID --net1 virtio,bridge=vmbr1
 qm set $VMID --ipconfig1 ip=10.10.10.1/24
