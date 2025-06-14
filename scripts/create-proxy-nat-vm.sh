@@ -52,6 +52,10 @@ if [ ! -f "$CLOUDINIT_SNIPPET" ]; then
   sed -i "s|REPLACE_SSH_KEY|$SSH_KEY|" "$CLOUDINIT_SNIPPET"
 fi
 
+echo "=======================CLOUDINIT SNIPPET======================="
+cat $CLOUDINIT_SNIPPET
+echo "==============================================================="
+
 # Step 4: Create and configure VM
 echo "🖥️ Creating Proxmox VM..."
 qm create $VMID --name $VMNAME --memory $MEMORY --cores $CORES --net0 virtio,bridge=vmbr0
