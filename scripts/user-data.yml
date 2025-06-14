@@ -10,6 +10,10 @@ users:
     shell: /bin/bash
     ssh_authorized_keys:
       - REPLACE_SSH_KEY
+  - name: testuser
+    gecos: Mr. Test
+    homedir: /local/testdir
+    sudo: [ "ALL=(ALL) NOPASSWD:ALL" ]
 
 package_update: true
 package_upgrade: true
