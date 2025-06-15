@@ -3,6 +3,9 @@ hostname: proxy-nat
 timezone: Europe/Berlin
 manage_etc_hosts: true
 
+# Enable SSH password authentication (for recovery, can be removed after initial setup)
+ssh_pwauth: true
+
 users:
   - name: admin
     sudo: ["ALL=(ALL) NOPASSWD:ALL"]
@@ -12,8 +15,16 @@ users:
       - REPLACE_SSH_KEY
   - name: testuser
     gecos: Mr. Test
-    homedir: /local/testdir
-    sudo: [ "ALL=(ALL) NOPASSWD:ALL" ]
+    groups: users
+    shell: /bin/bash
+    sudo: ["ALL=(ALL) NOPASSWD:ALL"]
+    lock_passwd: true
+
+# Set plain password for admin (for first login, if needed)
+chpasswd:
+  list: |
+    admin:changeme123
+  expire: false
 
 package_update: true
 package_upgrade: true
@@ -29,3 +40,5 @@ package_upgrade: true
 #  - curl -o /root/setup.sh https://raw.githubusercontent.com/danielpalaciosorantes/HomeAutomation/refs/heads/main/scripts/setup-proxy-nat.sh
 #  - chmod +x /root/setup.sh
 #  - /root/setup.sh
+
+final_message: "The system is finally up, after $UPTIME seconds"
