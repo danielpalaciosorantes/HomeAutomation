@@ -1,5 +1,5 @@
 ---
-#cloud-config
+# cloud-config
 hostname: proxy-nat
 timezone: Europe/Berlin
 manage_etc_hosts: true
@@ -29,14 +29,14 @@ chpasswd:
   expire: false
 package_update: true
 package_upgrade: true
-#packages:
+# packages:
 #  - curl
 #  - cloud-guest-utils
 #  - e2fsprogs
 #  - docker.io
 #  - docker-compose
 #  - iptables
-#runcmd:
+# runcmd:
 #  - >
 #      curl -o /root/setup.sh https://raw.githubusercontent.com/danielpalaciosorantes/
 #      HomeAutomation/refs/heads/main/
