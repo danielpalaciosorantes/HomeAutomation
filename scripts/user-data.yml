@@ -14,8 +14,6 @@ users:
     passwd: >
       $6$k4hBjCPQ$G48TsJGGyEnTm7uXAj6IpbYl0dQYyMkhgmy1UMSRldLZnH
       xrD6nIcN9vzkA5gFi0.zt5X3TXUvVKj1Se2l1bC.
-#    ssh_authorized_keys:
-#      - REPLACE_SSH_KEY
   - name: testuser
     gecos: Mr. Test
     groups: users
