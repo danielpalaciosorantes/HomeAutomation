@@ -37,9 +37,10 @@ package_upgrade: true
 #  - docker-compose
 #  - iptables
 #runcmd:
-#  - > 
+#  - >
 #      curl -o /root/setup.sh https://raw.githubusercontent.com/danielpalaciosorantes/
-#      HomeAutomation/refs/heads/main/scripts/setup-proxy-nat.sh
+#      HomeAutomation/refs/heads/main/
+       scripts/setup-proxy-nat.sh
 #  - chmod +x /root/setup.sh
 #  - /root/setup.sh
 final_message: "The system is finally up, after $UPTIME seconds"
