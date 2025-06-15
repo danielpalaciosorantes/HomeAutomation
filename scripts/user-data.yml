@@ -3,8 +3,6 @@
 hostname: proxy-nat
 timezone: Europe/Berlin
 manage_etc_hosts: true
-
-# Enable SSH password authentication (for recovery, can be removed after initial setup)
 ssh_pwauth: true
 
 users:
