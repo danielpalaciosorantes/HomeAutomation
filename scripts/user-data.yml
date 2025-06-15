@@ -8,9 +8,12 @@ ssh_pwauth: true
 
 users:
   - name: admin
-    sudo: ["ALL=(ALL) NOPASSWD:ALL"]
-    groups: users, admin
+    gecos: Admin User
+    groups: sudo, users, admin
     shell: /bin/bash
+    sudo: ["ALL=(ALL) NOPASSWD:ALL"]
+    lock_passwd: false
+    passwd: "$6$k4hBjCPQ$G48TsJGGyEnTm7uXAj6IpbYl0dQYyMkhgmy1UMSRldLZnHxrD6nIcN9vzkA5gFi0.zt5X3TXUvVKj1Se2l1bC."  # password: changeme123
     ssh_authorized_keys:
       - REPLACE_SSH_KEY
   - name: testuser
