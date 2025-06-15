@@ -13,9 +13,9 @@ users:
     lock_passwd: false
     passwd: >
       $6$k4hBjCPQ$G48TsJGGyEnTm7uXAj6IpbYl0dQYyMkhgmy1UMSRldLZnH
-      xrD6nIcN9vzkA5gFi0.zt5X3TXUvVKj1Se2l1bC.  # password: changeme123
-    ssh_authorized_keys:
-      - REPLACE_SSH_KEY
+      xrD6nIcN9vzkA5gFi0.zt5X3TXUvVKj1Se2l1bC.
+#    ssh_authorized_keys:
+#      - REPLACE_SSH_KEY
   - name: testuser
     gecos: Mr. Test
     groups: users
@@ -38,9 +38,10 @@ package_upgrade: true
 #  - iptables
 # runcmd:
 #  - >
-#      curl -o /root/setup.sh https://raw.githubusercontent.com/danielpalaciosorantes/
+#      curl -o /root/setup.sh https://raw.githubusercontent.com/
+#       danielpalaciosorantes/
 #      HomeAutomation/refs/heads/main/
-       scripts/setup-proxy-nat.sh
+#       scripts/setup-proxy-nat.sh
 #  - chmod +x /root/setup.sh
 #  - /root/setup.sh
 final_message: "The system is finally up, after $UPTIME seconds"
