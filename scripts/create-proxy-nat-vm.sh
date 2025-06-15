@@ -69,7 +69,7 @@ qm set $VMID --ide2 $STORAGE_CLOUDINIT:cloudinit
 qm set $VMID --ipconfig0 ip=dhcp
 qm set $VMID --net1 virtio,bridge=vmbr1
 qm set $VMID --ipconfig1 ip=10.10.10.1/24
-qm set $VMID --cicustom "user=local:snippets/user-data.yaml"
+qm set $VMID --cicustom "user=local:snippets/test.yaml"
 
 # Step 5: Start the VM
 echo "🚀 Starting VM $VMID..."
