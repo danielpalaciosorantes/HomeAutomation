@@ -12,7 +12,6 @@ users:
 
 package_update: true
 package_upgrade: true
-
 packages:
   - ca-certificates
   - curl
@@ -36,154 +35,129 @@ write_files:
       X11Forwarding no
 
 runcmd:
-  # Guest agent: on some images the unit is "static" (enable fails). Start is enough.
-  - [ bash, -lc, "systemctl start qemu-guest-agent || true" ]
+  # Guest agent
+  - systemctl enable --now qemu-guest-agent
 
   # SSH reload (path differs depending on Debian)
-  - [ bash, -lc, "systemctl reload ssh || systemctl reload sshd || true" ]
+  - systemctl reload ssh || systemctl reload sshd
 
   # -----------------------------
   # UFW (protect RP host services)
   # -----------------------------
-  - [ bash, -lc, "ufw --force reset || true" ]
-  - [ bash, -lc, "ufw default deny incoming" ]
-  - [ bash, -lc, "ufw default allow outgoing" ]
-  - [ bash, -lc, "ufw allow 22/tcp" ]
-  - [ bash, -lc, "ufw allow 80/tcp" ]
-  - [ bash, -lc, "ufw allow 443/tcp" ]
-  - [ bash, -lc, "ufw --force enable || true" ]
+  - ufw --force reset
+  - ufw default deny incoming
+  - ufw default allow outgoing
+  - ufw allow 22/tcp
+  - ufw allow 80/tcp
+  - ufw allow 443/tcp
+  - ufw --force enable
 
   # ---------------------------------------
   # vmbr1 DHCP + NAT gateway for HomeAssistant
   # ---------------------------------------
-  - [ bash, -lc, |
-                   set -euo pipefail
-                   
-                   INTERNAL_IP="10.10.10.1"
-                   INTERNAL_CIDR="${INTERNAL_IP}/24"
-                   INTERNAL_NET="10.10.10.0/24"
-                   
-                   # Fixed lease for HAOS (deterministic MAC)
-                   HA_MAC="52:54:00:12:34:56"
-                   HA_IP="10.10.10.10"
-                   
-                   RANGE_START="10.10.10.50"
-                   RANGE_END="10.10.10.200"
-                   
-                   # WAN interface by default route (vmbr0 side)
-                   WAN_IF="$(ip route show default | awk '{print $5; exit}')"
-                   if [ -z "${WAN_IF}" ]; then
-                   echo "Could not detect WAN_IF (no default route?)" >&2
-                   ip route show >&2
-                   exit 1
-                   fi
-                   
-                   # INTERNAL interface:
-                   # 1) if internal IP already exists, pick iface by that
-                   INTERNAL_IF="$(ip -o -4 addr show | awk -v cidr="${INTERNAL_CIDR}" '$0 ~ cidr {print $2; exit}')"
-                   
-                   # 2) otherwise: pick first non-loopback, non-WAN ethernet-like iface
-                   if [ -z "${INTERNAL_IF}" ]; then
-                   INTERNAL_IF="$(ip -o link show | awk -F': ' '{print $2}' | \
-                   grep -E '^(ens|enp|eth)' | grep -v "${WAN_IF}" | head -n1 || true)"
-                   fi
-                   
-                   if [ -z "${INTERNAL_IF}" ]; then
-                   echo "Could not detect INTERNAL_IF" >&2
-                   ip -o link show >&2
-                   ip -o -4 addr show >&2
-                   exit 1
-                   fi
-                   
-                   echo "WAN_IF=${WAN_IF}" >&2
-                   echo "INTERNAL_IF=${INTERNAL_IF}" >&2
-                   
-                   # Ensure internal IP is present (in case cloud-init ipconfig1 didn't apply)
-                   ip link set "${INTERNAL_IF}" up || true
-                   ip addr add "${INTERNAL_CIDR}" dev "${INTERNAL_IF}" 2>/dev/null || true
-                   
-                   # Enable IPv4 forwarding
-                   cat >/etc/sysctl.d/99-ipforward.conf <<'EOF'
-                   net.ipv4.ip_forward=1
-                   EOF
-                   sysctl -p /etc/sysctl.d/99-ipforward.conf || true
-                   
-                   # dnsmasq: DHCP only on internal interface
-                   cat >/etc/dnsmasq.d/vmbr1.conf <<EOF
-                   interface=${INTERNAL_IF}
-                   bind-interfaces
-                   
-                   dhcp-range=${RANGE_START},${RANGE_END},255.255.255.0,12h
-                   dhcp-option=option:router,${INTERNAL_IP}
-                   dhcp-option=option:dns-server,${INTERNAL_IP}
-                   
-                   dhcp-host=${HA_MAC},${HA_IP},haos-01,infinite
-                   log-dhcp
-                   EOF
-                   
-                   systemctl enable --now dnsmasq || true
-                   systemctl restart dnsmasq || true
-                   
-                   # nftables: NAT + forwarding control
-                   cat >/etc/nftables.conf <<EOF
-                   flush ruleset
-                   
-                   table inet filter {
-                   chain input {
-                   type filter hook input priority 0;
-                   policy drop;
-                   
-                   iif lo accept
-                   ct state established,related accept
-                   
-                   # Allow SSH + HTTP/HTTPS to RP
-                   tcp dport {22,80,443} accept
-                   
-                   # ICMP (optional)
-                   ip protocol icmp accept
-                   ip6 nexthdr icmpv6 accept
-                   }
-                   
-                   chain forward {
-                   type filter hook forward priority 0;
-                   policy drop;
-                   
-                   ct state established,related accept
-                   
-                   # Allow HA network to reach the internet via RP (NAT)
-                   iif "${INTERNAL_IF}" oif "${WAN_IF}" ip saddr ${INTERNAL_NET} accept
-                   
-                   # Allow RP to access HA UI on 8123 (reverse proxy -> HA)
-                   iif "${WAN_IF}" oif "${INTERNAL_IF}" ip daddr ${INTERNAL_NET} tcp dport 8123 accept
-                   }
-                   
-                   chain output {
-                   type filter hook output priority 0;
-                   policy accept;
-                   }
-                   }
-                   
-                   table ip nat {
-                   chain postrouting {
-                   type nat hook postrouting priority 100;
-                   oif "${WAN_IF}" ip saddr ${INTERNAL_NET} masquerade
-                   }
-                   }
-                   EOF
-                   
-                   systemctl enable --now nftables || true
-                   nft -f /etc/nftables.conf || true
-                   ]
-                   
-                   # -----------------------------
-                   # Install Caddy (simple TLS reverse proxy)
-                   # -----------------------------
-                   - [ bash, -lc, |
-                   set -euo pipefail
-                   apt-get install -y debian-keyring debian-archive-keyring apt-transport-https gpg || true
-                   curl -1sLf 'https://dl.cloudsmith.io/public/caddy/stable/gpg.key' | gpg --dearmor -o /usr/share/keyrings/caddy-stable-archive-keyring.gpg
-                   curl -1sLf 'https://dl.cloudsmith.io/public/caddy/stable/debian.deb.txt' | tee /etc/apt/sources.list.d/caddy-stable.list
-                   apt-get update
-                   apt-get install -y caddy
-                   systemctl enable --now caddy || true
-                   ]
+  - |
+    set -euo pipefail
+
+    INTERNAL_CIDR="10.10.10.1/24"
+    INTERNAL_NET="10.10.10.0/24"
+
+    # Fixed lease for HAOS (your deterministic MAC)
+    HA_MAC="52:54:00:12:34:56"
+    HA_IP="10.10.10.10"
+
+    RANGE_START="10.10.10.50"
+    RANGE_END="10.10.10.200"
+
+    # Detect WAN interface by default route (vmbr0 side)
+    WAN_IF="$(ip route show default | awk '{print $5; exit}')"
+
+    # Detect internal interface by the internal IP (vmbr1 side)
+    INTERNAL_IF="$(ip -o -4 addr show | awk -v cidr="${INTERNAL_CIDR}" '$0 ~ cidr {print $2; exit}')"
+
+    if [ -z "${WAN_IF}" ] || [ -z "${INTERNAL_IF}" ]; then
+      echo "Could not detect WAN/INTERNAL iface. WAN_IF=${WAN_IF} INTERNAL_IF=${INTERNAL_IF}" >&2
+      ip -o -4 addr show >&2
+      ip route show >&2
+      exit 1
+    fi
+
+    echo "WAN_IF=${WAN_IF}" >&2
+    echo "INTERNAL_IF=${INTERNAL_IF}" >&2
+
+    # Enable IPv4 forwarding
+    cat >/etc/sysctl.d/99-ipforward.conf <<'EOF'
+    net.ipv4.ip_forward=1
+    EOF
+    sysctl -p /etc/sysctl.d/99-ipforward.conf
+
+    # dnsmasq: DHCP only on internal interface
+    cat >/etc/dnsmasq.d/vmbr1.conf <<EOF
+    interface=${INTERNAL_IF}
+    bind-interfaces
+
+    dhcp-range=${RANGE_START},${RANGE_END},255.255.255.0,12h
+    dhcp-option=option:router,10.10.10.1
+    dhcp-option=option:dns-server,10.10.10.1
+
+    dhcp-host=${HA_MAC},${HA_IP},haos-01,infinite
+    log-dhcp
+    EOF
+
+    systemctl enable --now dnsmasq
+    systemctl restart dnsmasq
+
+    # nftables: NAT + forwarding control
+    cat >/etc/nftables.conf <<EOF
+    flush ruleset
+
+    table inet filter {
+      chain input {
+        type filter hook input priority 0;
+        policy drop;
+
+        iif lo accept
+        ct state established,related accept
+
+        # Allow SSH + HTTP/HTTPS to RP
+        tcp dport {22,80,443} accept
+
+        # ICMP (optional)
+        ip protocol icmp accept
+        ip6 nexthdr icmpv6 accept
+      }
+
+      chain forward {
+        type filter hook forward priority 0;
+        policy drop;
+
+        ct state established,related accept
+
+        # Allow HA network to reach the internet via RP (NAT)
+        iif "${INTERNAL_IF}" oif "${WAN_IF}" ip saddr ${INTERNAL_NET} accept
+
+        # Allow RP to access HA UI on 8123 (reverse proxy -> HA)
+        iif "${WAN_IF}" oif "${INTERNAL_IF}" ip daddr ${INTERNAL_NET} tcp dport 8123 accept
+      }
+
+      chain output {
+        type filter hook output priority 0;
+        policy accept;
+      }
+    }
+
+    table ip nat {
+      chain postrouting {
+        type nat hook postrouting priority 100;
+        oif "${WAN_IF}" ip saddr ${INTERNAL_NET} masquerade
+      }
+    }
+    EOF
+
+    systemctl enable --now nftables
+    nft -f /etc/nftables.conf
+
+  # -----------------------------
+  # Install Caddy (TLS reverse proxy)
+  # -----------------------------
+  - curl -1sLf 'https://dl.cloudsmith.io/public/caddy/stable/gpg.key' | gpg --dearmor -o /usr/share/keyrings/caddy-stable-archive-keyring.gpg
+  - curl -1sLf 'https://dl.cloudsmith.io/pu
