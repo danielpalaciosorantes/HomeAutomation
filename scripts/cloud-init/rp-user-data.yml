@@ -35,23 +35,32 @@ write_files:
       X11Forwarding no
 
 runcmd:
-  # Guest agent
-  - systemctl enable --now qemu-guest-agent
-
-  # SSH reload (path differs depending on Debian)
-  - systemctl reload ssh || systemctl reload sshd
-
-  # -----------------------------
-  # UFW (protect RP host services)
-  # -----------------------------
-  - ufw --force reset
-  - ufw default deny incoming
-  - ufw default allow outgoing
-  - ufw allow 22/tcp
-  - ufw allow 80/tcp
-  - ufw allow 443/tcp
-  - ufw --force enable
-
+  - [ bash, -lc, |
+       set -e
+       
+       # Guest agent (static unit on some images)
+       systemctl start qemu-guest-agent || true
+       
+       # Reload SSH safely
+       systemctl reload ssh || systemctl reload sshd || true
+       
+       # -----------------------------
+       # UFW (protect RP host services)
+       # -----------------------------
+       ufw --force reset || true
+       ufw default deny incoming
+       ufw default allow outgoing
+       
+       # ALWAYS allow SSH first
+       ufw allow 22/tcp
+       
+       # Web traffic
+       ufw allow 80/tcp
+       ufw allow 443/tcp
+       
+       ufw --force enable || true
+       ]
+                  
   # ---------------------------------------
   # vmbr1 DHCP + NAT gateway for HomeAssistant
   # ---------------------------------------
