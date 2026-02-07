@@ -10,8 +10,8 @@ HAOS_VERSION="${HAOS_VERSION:?Set HAOS_VERSION (e.g. 17.0) to pin an exact HAOS 
 VMID="${VMID:-102}"
 NAME="${NAME:-haos-01}"
 
-# IMPORTANT: internal-only network
-BRIDGE="${BRIDGE:-vmbr1}"
+# Put HAOS on LAN (router DHCP) for local-only communication
+BRIDGE="${BRIDGE:-vmbr0}"
 
 CORES="${CORES:-2}"
 MEMORY="${MEMORY:-4096}"
@@ -19,7 +19,7 @@ DISK_GB="${DISK_GB:-32}"
 
 STORAGE="${STORAGE:-local-lvm}"
 
-# Optional deterministic MAC (recommended if you later run DHCP on vmbr1)
+# Optional deterministic MAC (useful for DHCP reservations on your router)
 MAC="${MAC:-52:54:00:12:34:56}"  # empty => auto
 
 ARCH="${ARCH:-generic-x86-64}"
@@ -93,13 +93,8 @@ qm set "$VMID" --efidisk0 "${STORAGE}:1,efitype=4m,pre-enrolled-keys=0"
 echo "==> Importing disk into storage: ${STORAGE}"
 qm importdisk "$VMID" "$IMG_RAW" "$STORAGE"
 
-# Attach imported disk as virtio0 (reliable for HAOS)
 qm set "$VMID" --virtio0 "${STORAGE}:vm-${VMID}-disk-0"
-
-# Resize disk to desired size
 qm resize "$VMID" virtio0 "${DISK_GB}G" >/dev/null
-
-# Boot from virtio0
 qm set "$VMID" --boot order=virtio0
 
 echo "==> Starting VM..."
@@ -109,11 +104,8 @@ echo
 echo "Done."
 echo "VMID:   $VMID"
 echo "Name:   $NAME"
-echo "Bridge: $BRIDGE (internal-only)"
+echo "Bridge: $BRIDGE (LAN)"
 if [[ -n "$MAC" ]]; then
   echo "MAC:    $MAC"
+  echo "TIP:    Create a DHCP reservation on your router for this MAC."
 fi
-echo
-echo "NOTE: HAOS is now on vmbr1 only."
-echo "      It will NOT get an IP from your router DHCP."
-echo "      Next step: run DHCP on rp-01 for vmbr1 OR set a static IP in HA."
