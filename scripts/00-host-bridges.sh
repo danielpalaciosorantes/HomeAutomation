@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-LAN_IP_CIDR="${LAN_IP_CIDR:?set LAN_IP_CIDR like 192.168.178.50/24}"
-LAN_GW="${LAN_GW:?set LAN_GW like 192.168.178.1}"
+LAN_IP_CIDR="${LAN_IP_CIDR:-192.168.178.50/24}"
+LAN_GW="${LAN_GW:-192.168.178.1}"
 ROLLBACK_SECONDS="${ROLLBACK_SECONDS:-120}"
 
 if ! command -v ifreload >/dev/null 2>&1; then
