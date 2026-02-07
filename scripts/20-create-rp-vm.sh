@@ -57,7 +57,7 @@ fi
 
 # cloud-init snippet
 qm set "$VMID" --cicustom "user=local:snippets/${NAME}-user-data.yml"
-qm set "$VMID" --ciuser daniel
+qm set "$VMID" --ciuser bmanager
 
 qm start "$VMID"
 echo "Created + started $NAME (VMID $VMID)"
