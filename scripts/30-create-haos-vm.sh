@@ -5,12 +5,12 @@ set -euo pipefail
 # Reproducible HAOS VM creator
 # ---------------------------
 
-HAOS_VERSION="${HAOS_VERSION:?Set HAOS_VERSION (e.g. 17.0) to pin an exact HAOS release}"
+HAOS_VERSION="${HAOS_VERSION:?Set HAOS_VERSION (e.g. 13.2) to pin an exact HAOS release}"
 
 VMID="${VMID:-102}"
 NAME="${NAME:-haos-01}"
 
-# Put HAOS on LAN (router DHCP) for local-only communication
+# Put HAOS on LAN (router DHCP)
 BRIDGE="${BRIDGE:-vmbr0}"
 
 CORES="${CORES:-2}"
@@ -83,18 +83,33 @@ qm create "$VMID" \
   --ostype l26 \
   --machine q35 \
   --bios ovmf \
-  --serial0 socket \
-  --vga serial0 \
+  --vga std \
   --agent enabled=1,fstrim_cloned_disks=1
 
-# IMPORTANT: disable Secure Boot (pre-enrolled-keys=0)
-qm set "$VMID" --efidisk0 "${STORAGE}:1,efitype=4m,pre-enrolled-keys=0"
-
-echo "==> Importing disk into storage: ${STORAGE}"
+echo "==> Importing HAOS disk into storage: ${STORAGE}"
 qm importdisk "$VMID" "$IMG_RAW" "$STORAGE"
 
-qm set "$VMID" --virtio0 "${STORAGE}:vm-${VMID}-disk-0"
+# The imported disk will appear as "unused0" initially; attach it as virtio0.
+# We don't assume disk numbers; we read them from qm config to be safe.
+imported_vol="$(qm config "$VMID" | awk -F'[:, ]+' '/^unused0:/ {print $2 ":" $3; exit}')"
+if [[ -z "${imported_vol}" ]]; then
+  echo "ERROR: Could not find unused0 after importdisk. qm config output:" >&2
+  qm config "$VMID" >&2
+  exit 1
+fi
+
+echo "==> Attaching imported disk as virtio0: ${imported_vol}"
+qm set "$VMID" --virtio0 "${imported_vol}"
+
+echo "==> Resizing virtio0 to ${DISK_GB}G"
 qm resize "$VMID" virtio0 "${DISK_GB}G" >/dev/null
+
+# IMPORTANT: add EFI disk AFTER import so it doesn't steal disk-0 numbering
+# Keep it tiny; 4M or 8M is enough.
+echo "==> Adding efidisk0 (secure boot disabled)"
+qm set "$VMID" --efidisk0 "${STORAGE}:4M,efitype=4m,pre-enrolled-keys=0"
+
+echo "==> Boot from virtio0"
 qm set "$VMID" --boot order=virtio0
 
 echo "==> Starting VM..."
@@ -104,8 +119,10 @@ echo
 echo "Done."
 echo "VMID:   $VMID"
 echo "Name:   $NAME"
-echo "Bridge: $BRIDGE (LAN)"
+echo "Bridge: $BRIDGE (LAN DHCP)"
 if [[ -n "$MAC" ]]; then
   echo "MAC:    $MAC"
   echo "TIP:    Create a DHCP reservation on your router for this MAC."
 fi
+echo
+echo "Access: http://<HAOS-IP>:8123  (find IP in router DHCP leases)"
