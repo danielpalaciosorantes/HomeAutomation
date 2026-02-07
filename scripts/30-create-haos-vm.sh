@@ -35,6 +35,7 @@ require_cmd() { command -v "$1" >/dev/null 2>&1 || { echo "Missing $1" >&2; exit
 require_cmd qm
 require_cmd curl
 require_cmd xz
+require_cmd awk
 
 if qm status "$VMID" >/dev/null 2>&1; then
   echo "VMID $VMID already exists. Refusing to overwrite." >&2
@@ -91,7 +92,7 @@ qm importdisk "$VMID" "$IMG_RAW" "$STORAGE"
 
 # The imported disk will appear as "unused0" initially; attach it as virtio0.
 # We don't assume disk numbers; we read them from qm config to be safe.
-imported_vol="$(qm config "$VMID" | awk -F'[:, ]+' '/^unused0:/ {print $2 ":" $3; exit}')"
+imported_vol="$(qm config "$VMID" | awk -F': ' '/^unused0:/ {print $2; exit}')"
 if [[ -z "${imported_vol}" ]]; then
   echo "ERROR: Could not find unused0 after importdisk. qm config output:" >&2
   qm config "$VMID" >&2
@@ -104,10 +105,9 @@ qm set "$VMID" --virtio0 "${imported_vol}"
 echo "==> Resizing virtio0 to ${DISK_GB}G"
 qm resize "$VMID" virtio0 "${DISK_GB}G" >/dev/null
 
-# IMPORTANT: add EFI disk AFTER import so it doesn't steal disk-0 numbering
-# Keep it tiny; 4M or 8M is enough.
+# IMPORTANT: add EFI disk AFTER import so it doesn't steal disk numbering
 echo "==> Adding efidisk0 (secure boot disabled)"
-qm set "$VMID" --efidisk0 "${STORAGE},efitype=4m,pre-enrolled-keys=0,size=4M"
+qm set "$VMID" --efidisk0 "${STORAGE}:0,efitype=4m,pre-enrolled-keys=0,size=4M"
 
 echo "==> Boot from virtio0"
 qm set "$VMID" --boot order=virtio0
