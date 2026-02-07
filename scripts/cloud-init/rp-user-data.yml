@@ -55,7 +55,7 @@ runcmd:
   # ---------------------------------------
   # vmbr1 DHCP + NAT gateway for HomeAssistant
   # ---------------------------------------
-  - |
+  - [ bash, -lc, |
     set -euo pipefail
 
     INTERNAL_CIDR="10.10.10.1/24"
@@ -155,9 +155,17 @@ runcmd:
 
     systemctl enable --now nftables
     nft -f /etc/nftables.conf
-
-  # -----------------------------
-  # Install Caddy (TLS reverse proxy)
-  # -----------------------------
-  - curl -1sLf 'https://dl.cloudsmith.io/public/caddy/stable/gpg.key' | gpg --dearmor -o /usr/share/keyrings/caddy-stable-archive-keyring.gpg
-  - curl -1sLf 'https://dl.cloudsmith.io/pu
+  ]
+                   
+   # -----------------------------
+   # Install Caddy (simple TLS reverse proxy)
+   # -----------------------------
+   - [ bash, -lc, |
+     set -euo pipefail
+     apt-get install -y debian-keyring debian-archive-keyring apt-transport-https gpg || true
+     curl -1sLf 'https://dl.cloudsmith.io/public/caddy/stable/gpg.key' | gpg --dearmor -o /usr/share/keyrings/caddy-stable-archive-keyring.gpg
+     curl -1sLf 'https://dl.cloudsmith.io/public/caddy/stable/debian.deb.txt' | tee /etc/apt/sources.list.d/caddy-stable.list
+     apt-get update
+     apt-get install -y caddy
+     systemctl enable --now caddy || true
+   ]
