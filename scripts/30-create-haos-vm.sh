@@ -19,10 +19,9 @@ MEMORY="${MEMORY:-4096}"
 # Storage where the VM disk should live
 STORAGE="${STORAGE:-local-lvm}"
 
-# Optional: Set a deterministic MAC to make DHCP reservation reproducible
-# Example:
-#   MAC="52:54:00:12:34:56"
-MAC="${MAC:-52:54:00:ha:34:56}"  # leave empty to let Proxmox auto-generate
+# Optional: deterministic MAC to make DHCP reservation reproducible
+# Example: MAC="52:54:00:12:34:56"
+MAC="${MAC:-52:54:00:HA:34:56}"  # leave empty to let Proxmox auto-generate
 
 # QEMU / disk settings
 SCSIHW="${SCSIHW:-virtio-scsi-pci}"
@@ -59,14 +58,12 @@ echo "==> HAOS version pinned: ${HAOS_VERSION}"
 echo "==> Asset: ${HAOS_ASSET}"
 echo "==> Download: ${URL}"
 
-# Fail fast if the asset doesn't exist
-status_line="$(curl -sI "$URL" | head -n1 || true)"
-if ! echo "$status_line" | grep -qE ' 200 '; then
-  echo "ERROR: HAOS asset not found (HTTP HEAD: ${status_line})" >&2
+# Fail fast, but FOLLOW redirects (-L) because GitHub returns 302 for release assets.
+http_code="$(curl -sIL -o /dev/null -w '%{http_code}' "$URL" || true)"
+if [[ "$http_code" != "200" && "$http_code" != "206" ]]; then
+  echo "ERROR: HAOS asset not reachable (HTTP ${http_code})" >&2
   echo "Tried URL: ${URL}" >&2
-  echo "Notes:" >&2
-  echo "  - HAOS assets for Generic x86-64 are typically: haos_generic-x86-64-<ver>.img.xz" >&2
-  echo "  - RC tags may exist but not always publish all assets." >&2
+  echo "If this is a valid release, try checking the exact asset name on the release page." >&2
   exit 1
 fi
 
@@ -113,7 +110,7 @@ qm set "$VMID" --scsi0 "${STORAGE}:vm-${VMID}-disk-0"
 # Boot from scsi0
 qm set "$VMID" --boot order=scsi0
 
-# Enable guest agent flag (HAOS can support it; harmless if not active)
+# Enable guest agent flag (harmless if not active)
 qm set "$VMID" --agent enabled=1,fstrim_cloned_disks=1
 
 echo "==> Starting VM..."
