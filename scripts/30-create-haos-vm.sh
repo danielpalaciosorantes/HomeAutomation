@@ -21,7 +21,7 @@ STORAGE="${STORAGE:-local-lvm}"
 
 # Optional: deterministic MAC to make DHCP reservation reproducible
 # Example: MAC="52:54:00:12:34:56"
-MAC="${MAC:-52:54:00:HA:34:56}"  # leave empty to let Proxmox auto-generate
+MAC="${MAC:-52:54:00:12:34:56}"  # leave empty to let Proxmox auto-generate
 
 # QEMU / disk settings
 SCSIHW="${SCSIHW:-virtio-scsi-pci}"
