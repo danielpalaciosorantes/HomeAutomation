@@ -6,7 +6,7 @@ set -euo pipefail
 # ---------------------------
 
 # REQUIRED: pin HAOS version for reproducibility (example: 13.2)
-HAOS_VERSION="${HAOS_VERSION:-17.1.rc1}"
+HAOS_VERSION="${HAOS_VERSION:-17.0}"
 MAC="${MAC:-52:54:00:ha:01:02}"
 # VM settings (override via env if needed)
 VMID="${VMID:-102}"
