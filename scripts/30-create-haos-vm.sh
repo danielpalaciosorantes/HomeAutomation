@@ -7,8 +7,8 @@ set -euo pipefail
 
 HAOS_VERSION="${HAOS_VERSION:?Set HAOS_VERSION (e.g. 13.2) to pin an exact HAOS release}"
 
-VMID="${VMID:-102}"
-NAME="${NAME:-haos-01}"
+VMID="${VMID:-103}"
+NAME="${NAME:-haos-02}"
 
 # Put HAOS on LAN (router DHCP)
 BRIDGE="${BRIDGE:-vmbr0}"
@@ -20,13 +20,14 @@ DISK_GB="${DISK_GB:-32}"
 STORAGE="${STORAGE:-local-lvm}"
 
 # Optional deterministic MAC (useful for DHCP reservations on your router)
-MAC="${MAC:-52:54:00:12:34:56}"  # empty => auto
+MAC="${MAC:-52:54:00:12:34:57}"  # empty => auto
 
-ARCH="${ARCH:-generic-x86-64}"
-HAOS_ASSET="${HAOS_ASSET:-haos_${ARCH}-${HAOS_VERSION}.img.xz}"
+# CHANGED: use the Proxmox/KVM qcow2 image (OVA release)
+HAOS_ASSET="${HAOS_ASSET:-haos_ova-${HAOS_VERSION}.qcow2.xz}"
 
 CACHE_DIR="${CACHE_DIR:-/var/lib/vz/template/cache/haos}"
 IMG_XZ="${CACHE_DIR}/${HAOS_ASSET}"
+# CHANGED: qcow2, not raw
 IMG_RAW="${IMG_XZ%.xz}"
 
 URL="${URL:-https://github.com/home-assistant/operating-system/releases/download/${HAOS_VERSION}/${HAOS_ASSET}}"
