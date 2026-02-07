@@ -107,7 +107,7 @@ qm resize "$VMID" virtio0 "${DISK_GB}G" >/dev/null
 # IMPORTANT: add EFI disk AFTER import so it doesn't steal disk-0 numbering
 # Keep it tiny; 4M or 8M is enough.
 echo "==> Adding efidisk0 (secure boot disabled)"
-qm set "$VMID" --efidisk0 "${STORAGE}:4M,efitype=4m,pre-enrolled-keys=0"
+qm set "$VMID" --efidisk0 "${STORAGE},efitype=4m,pre-enrolled-keys=0,size=4M"
 
 echo "==> Boot from virtio0"
 qm set "$VMID" --boot order=virtio0
