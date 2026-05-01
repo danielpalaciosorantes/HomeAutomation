@@ -1,0 +1,97 @@
+#cloud-config
+hostname: ${HOSTNAME}
+manage_etc_hosts: true
+
+users:
+  - name: bmanager
+    groups: [sudo, docker]
+    sudo: ALL=(ALL) NOPASSWD:ALL
+    shell: /bin/bash
+    ssh_authorized_keys:
+      - ${SSH_PUB_KEY}
+
+package_update: true
+package_upgrade: true
+
+packages:
+  - ca-certificates
+  - curl
+  - gnupg
+  - ufw
+  - fail2ban
+  - qemu-guest-agent
+
+write_files:
+  - path: /etc/ssh/sshd_config.d/99-hardening.conf
+    permissions: "0644"
+    content: |
+      PasswordAuthentication no
+      PermitRootLogin no
+      KbdInteractiveAuthentication no
+      X11Forwarding no
+
+  - path: /opt/mosquitto/config/mosquitto.conf
+    permissions: "0644"
+    content: |
+      persistence true
+      persistence_location /mosquitto/data/
+
+      log_dest stdout
+      log_dest file /mosquitto/log/mosquitto.log
+
+      listener 1883
+      allow_anonymous false
+      password_file /mosquitto/config/passwordfile
+
+  - path: /opt/mosquitto/docker-compose.yml
+    permissions: "0644"
+    content: |
+      services:
+        mosquitto:
+          image: eclipse-mosquitto:2
+          container_name: mosquitto
+          restart: unless-stopped
+          ports:
+            - "1883:1883"
+          volumes:
+            - ./config:/mosquitto/config
+            - ./data:/mosquitto/data
+            - ./log:/mosquitto/log
+
+runcmd:
+  # Guest agent
+  - systemctl enable --now qemu-guest-agent || true
+
+  # SSH hardening reload
+  - systemctl reload ssh || systemctl reload sshd || true
+
+  # Basic firewall
+  - ufw --force reset
+  - ufw default deny incoming
+  - ufw default allow outgoing
+  - ufw allow 22/tcp
+  - ufw allow 1883/tcp
+  - ufw --force enable
+
+  # Install Docker using Docker's official convenience script.
+  # For a stricter production setup, replace this with the official apt repo method.
+  - curl -fsSL https://get.docker.com | sh
+
+  # Make sure Docker is enabled
+  - systemctl enable --now docker
+
+  # Prepare Mosquitto directories
+  - mkdir -p /opt/mosquitto/config /opt/mosquitto/data /opt/mosquitto/log
+
+  # Create Mosquitto password file using the Mosquitto container itself
+  - docker run --rm -v /opt/mosquitto/config:/mosquitto/config eclipse-mosquitto:2 mosquitto_passwd -b -c /mosquitto/config/passwordfile ${MQTT_USERNAME} '${MQTT_PASSWORD}'
+
+  # Secure password file
+  - chmod 0700 /opt/mosquitto/config
+  - chmod 0600 /opt/mosquitto/config/passwordfile
+
+  # Start Mosquitto
+  - cd /opt/mosquitto && docker compose up -d
+
+  # Show status in cloud-init logs
+  - docker ps
