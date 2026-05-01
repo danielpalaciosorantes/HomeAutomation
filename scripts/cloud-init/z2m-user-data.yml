@@ -1,0 +1,132 @@
+#cloud-config
+hostname: ${HOSTNAME}
+manage_etc_hosts: true
+
+users:
+  - name: bmanager
+    groups: [sudo, dialout]
+    sudo: ALL=(ALL) NOPASSWD:ALL
+    shell: /bin/bash
+    lock_passwd: true
+    ssh_authorized_keys:
+      - ${SSH_PUB_KEY}
+
+package_update: true
+package_upgrade: true
+
+packages:
+  - ca-certificates
+  - curl
+  - gnupg
+  - git
+  - make
+  - g++
+  - gcc
+  - ufw
+  - fail2ban
+  - qemu-guest-agent
+
+write_files:
+  - path: /etc/ssh/sshd_config.d/99-hardening.conf
+    permissions: "0644"
+    content: |
+      PasswordAuthentication no
+      PermitRootLogin no
+      KbdInteractiveAuthentication no
+      X11Forwarding no
+
+  - path: /etc/systemd/system/zigbee2mqtt.service
+    permissions: "0644"
+    content: |
+      [Unit]
+      Description=Zigbee2MQTT
+      After=network-online.target
+      Wants=network-online.target
+
+      [Service]
+      Type=simple
+      User=zigbee2mqtt
+      Group=zigbee2mqtt
+      WorkingDirectory=/opt/zigbee2mqtt
+      Environment=NODE_ENV=production
+      Environment=ZIGBEE2MQTT_DATA=/opt/zigbee2mqtt/data
+      ExecStart=/usr/bin/pnpm start
+      Restart=on-failure
+      RestartSec=10
+
+      [Install]
+      WantedBy=multi-user.target
+
+runcmd:
+  # Guest agent
+  - systemctl enable --now qemu-guest-agent || true
+
+  # SSH hardening reload
+  - systemctl reload ssh || systemctl reload sshd || true
+
+  # Firewall
+  - ufw --force reset
+  - ufw default deny incoming
+  - ufw default allow outgoing
+  - ufw allow 22/tcp
+  - ufw allow 8080/tcp
+  - ufw --force enable
+  - ufw logging off
+
+  # Install Node.js 22
+  - curl -fsSL https://deb.nodesource.com/setup_22.x | bash -
+  - apt-get install -y nodejs
+
+  # Enable pnpm through corepack
+  - corepack enable
+  - corepack prepare pnpm@latest --activate
+
+  # Create Zigbee2MQTT system user
+  - useradd --system --home /opt/zigbee2mqtt --shell /usr/sbin/nologin zigbee2mqtt || true
+  - usermod -aG dialout zigbee2mqtt || true
+
+  # Install Zigbee2MQTT natively
+  - git clone --depth 1 https://github.com/Koenkk/zigbee2mqtt.git /opt/zigbee2mqtt
+  - mkdir -p /opt/zigbee2mqtt/data
+
+  # Write Zigbee2MQTT configuration
+  - |
+    cat >/opt/zigbee2mqtt/data/configuration.yaml <<'EOF'
+    homeassistant:
+      enabled: true
+
+    frontend:
+      enabled: true
+      port: 8080
+
+    mqtt:
+      server: mqtt://${MQTT_HOST}:${MQTT_PORT}
+      user: ${MQTT_USERNAME}
+      password: '${MQTT_PASSWORD}'
+
+    serial:
+      port: /dev/ttyACM0
+      adapter: ${ZIGBEE_ADAPTER}
+      baudrate: ${ZIGBEE_BAUDRATE}
+
+    advanced:
+      network_key: GENERATE
+      pan_id: GENERATE
+      ext_pan_id: GENERATE
+      channel: ${ZIGBEE_CHANNEL}
+    EOF
+
+  # Ownership
+  - chown -R zigbee2mqtt:zigbee2mqtt /opt/zigbee2mqtt
+
+  # Install dependencies as zigbee2mqtt user
+  - sudo -u zigbee2mqtt -H bash -lc 'cd /opt/zigbee2mqtt && pnpm install --frozen-lockfile'
+
+  # Enable service but do not start yet.
+  # Start only after passing the coordinator to this VM.
+  - systemctl daemon-reload
+  - systemctl enable zigbee2mqtt
+
+  # Show installed versions in cloud-init logs
+  - node --version
+  - pnpm --version
