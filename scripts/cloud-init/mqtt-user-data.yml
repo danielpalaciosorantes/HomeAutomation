@@ -18,6 +18,7 @@ packages:
   - ca-certificates
   - curl
   - gnupg
+  - openssl
   - ufw
   - fail2ban
   - qemu-guest-agent
@@ -39,9 +40,20 @@ write_files:
 
       log_dest stdout
 
-      listener 1883
+      # Plain MQTT listener, useful for debugging
+      listener 1884
       allow_anonymous false
       password_file /mosquitto/config/passwordfile
+
+      # MQTT over TLS
+      listener 8884
+      allow_anonymous false
+      password_file /mosquitto/config/passwordfile
+
+      cafile /mosquitto/config/certs/ca.crt
+      certfile /mosquitto/config/certs/server.crt
+      keyfile /mosquitto/config/certs/server.key
+      tls_version tlsv1.2
 
   - path: /opt/mosquitto/docker-compose.yml
     permissions: "0644"
@@ -52,7 +64,8 @@ write_files:
           container_name: mosquitto
           restart: unless-stopped
           ports:
-            - "1883:1883"
+            - "1884:1884"
+            - "8884:8884"
           volumes:
             - ./config:/mosquitto/config
             - ./data:/mosquitto/data
@@ -70,7 +83,8 @@ runcmd:
   - ufw default deny incoming
   - ufw default allow outgoing
   - ufw allow 22/tcp
-  - ufw allow 1883/tcp
+  - ufw allow 1884/tcp
+  - ufw allow 8884/tcp
   - ufw --force enable
 
   # Install Docker
@@ -83,7 +97,42 @@ runcmd:
   - usermod -aG docker bmanager || true
 
   # Prepare Mosquitto directories
-  - mkdir -p /opt/mosquitto/config /opt/mosquitto/data /opt/mosquitto/log
+  - mkdir -p /opt/mosquitto/config /opt/mosquitto/data /opt/mosquitto/log /opt/mosquitto/config/certs
+
+  # Generate local CA
+  - openssl genrsa -out /opt/mosquitto/config/certs/ca.key 4096
+  - openssl req -x509 -new -nodes -key /opt/mosquitto/config/certs/ca.key -sha256 -days 3650 -out /opt/mosquitto/config/certs/ca.crt -subj "/CN=home-mqtt-ca"
+
+  # Generate Mosquitto server key
+  - openssl genrsa -out /opt/mosquitto/config/certs/server.key 2048
+
+  # Create OpenSSL config with DNS and IP SANs
+  - |
+    cat >/opt/mosquitto/config/certs/server-openssl.cnf <<'EOF'
+    [req]
+    default_bits = 2048
+    prompt = no
+    default_md = sha256
+    distinguished_name = dn
+    req_extensions = req_ext
+
+    [dn]
+    CN = mqtt-01
+
+    [req_ext]
+    subjectAltName = @alt_names
+
+    [alt_names]
+    DNS.1 = mqtt-01
+    DNS.2 = mqtt-01.local
+    IP.1 = 192.168.178.15
+    EOF
+
+  # Create certificate signing request
+  - openssl req -new -key /opt/mosquitto/config/certs/server.key -out /opt/mosquitto/config/certs/server.csr -config /opt/mosquitto/config/certs/server-openssl.cnf
+
+  # Sign server certificate with local CA
+  - openssl x509 -req -in /opt/mosquitto/config/certs/server.csr -CA /opt/mosquitto/config/certs/ca.crt -CAkey /opt/mosquitto/config/certs/ca.key -CAcreateserial -out /opt/mosquitto/config/certs/server.crt -days 825 -sha256 -extensions req_ext -extfile /opt/mosquitto/config/certs/server-openssl.cnf
 
   # Create Mosquitto password file using the Mosquitto container itself
   - docker run --rm -v /opt/mosquitto/config:/mosquitto/config eclipse-mosquitto:2 mosquitto_passwd -b -c /mosquitto/config/passwordfile ${MQTT_USERNAME} '${MQTT_PASSWORD}'
@@ -94,8 +143,12 @@ runcmd:
   - chmod 0755 /opt/mosquitto/config
   - chmod 0755 /opt/mosquitto/data
   - chmod 0755 /opt/mosquitto/log
+  - chmod 0755 /opt/mosquitto/config/certs
   - chmod 0644 /opt/mosquitto/config/mosquitto.conf
   - chmod 0640 /opt/mosquitto/config/passwordfile
+  - chmod 0644 /opt/mosquitto/config/certs/ca.crt
+  - chmod 0644 /opt/mosquitto/config/certs/server.crt
+  - chmod 0640 /opt/mosquitto/config/certs/server.key
 
   # Start Mosquitto
   - cd /opt/mosquitto && docker compose up -d
