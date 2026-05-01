@@ -4,9 +4,10 @@ manage_etc_hosts: true
 
 users:
   - name: bmanager
-    groups: [sudo, docker]
+    groups: [sudo]
     sudo: ALL=(ALL) NOPASSWD:ALL
     shell: /bin/bash
+    lock_passwd: true
     ssh_authorized_keys:
       - ${SSH_PUB_KEY}
 
@@ -37,7 +38,6 @@ write_files:
       persistence_location /mosquitto/data/
 
       log_dest stdout
-      log_dest file /mosquitto/log/mosquitto.log
 
       listener 1883
       allow_anonymous false
@@ -73,12 +73,14 @@ runcmd:
   - ufw allow 1883/tcp
   - ufw --force enable
 
-  # Install Docker using Docker's official convenience script.
-  # For a stricter production setup, replace this with the official apt repo method.
+  # Install Docker
   - curl -fsSL https://get.docker.com | sh
 
   # Make sure Docker is enabled
   - systemctl enable --now docker
+
+  # Allow bmanager to use Docker without sudo after next login
+  - usermod -aG docker bmanager || true
 
   # Prepare Mosquitto directories
   - mkdir -p /opt/mosquitto/config /opt/mosquitto/data /opt/mosquitto/log
@@ -86,9 +88,14 @@ runcmd:
   # Create Mosquitto password file using the Mosquitto container itself
   - docker run --rm -v /opt/mosquitto/config:/mosquitto/config eclipse-mosquitto:2 mosquitto_passwd -b -c /mosquitto/config/passwordfile ${MQTT_USERNAME} '${MQTT_PASSWORD}'
 
-  # Secure password file
-  - chmod 0700 /opt/mosquitto/config
-  - chmod 0600 /opt/mosquitto/config/passwordfile
+  # Fix ownership and permissions for the Mosquitto container user
+  - chown -R 1883:1883 /opt/mosquitto
+  - chmod 0755 /opt/mosquitto
+  - chmod 0755 /opt/mosquitto/config
+  - chmod 0755 /opt/mosquitto/data
+  - chmod 0755 /opt/mosquitto/log
+  - chmod 0644 /opt/mosquitto/config/mosquitto.conf
+  - chmod 0640 /opt/mosquitto/config/passwordfile
 
   # Start Mosquitto
   - cd /opt/mosquitto && docker compose up -d
