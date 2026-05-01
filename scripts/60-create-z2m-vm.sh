@@ -4,7 +4,7 @@ set -euo pipefail
 # ---- configurable bits ----
 TEMPLATE_VMID="${TEMPLATE_VMID:-9000}"
 
-VMID="${VMID:-103}"
+VMID="${VMID:-104}"
 NAME="${NAME:-z2m-01}"
 HOSTNAME="${HOSTNAME:-z2m-01}"
 
@@ -126,6 +126,7 @@ qm clone "$TEMPLATE_VMID" "$VMID" --name "$NAME" --full 1
 qm set "$VMID" \
   --cores "$CORES" \
   --memory "$MEMORY" \
+  --agent enabled=1 \
   --net0 virtio="${LAN_MAC}",bridge="$BR_LAN" \
   --ipconfig0 "$LAN_IPCFG" \
   --ciuser bmanager \
